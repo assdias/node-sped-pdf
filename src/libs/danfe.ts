@@ -2,6 +2,7 @@ import { PDFDocument, StandardFonts, rgb, PDFFont } from "pdf-lib"
 import { XMLParser } from "fast-xml-parser"
 import JsBarcode from "jsbarcode"
 import canvas from "canvas"
+import { isArray } from "util"
 
 
 
@@ -128,7 +129,7 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
         }
 
         // Garante que maxWidth não ultrapasse a largura da página
-        if (maxWidth + x > PDF.width) maxWidth = PDF.width - x - 2;
+        if (maxWidth + x > PDF.width) maxWidth = PDF.width - x - 5;
 
         // Define altura da linha baseada no tamanho da fonte, se não especificada
         const effectiveLineHeight = lineHeight ?? size * .9;
@@ -419,38 +420,73 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
     }
 
     async function bloco3(page = PDF.pages[(PDF.pages.length - 1)]) {
-        addTXT({ page, text: "PAGAMENTOS", x: 3, y: PDF.mtBlock, maxWidth: PDF.width * 0.25, fontStyle: "negrito" });
-
-        const pagamentos = Array.isArray(xml.NFe.infNFe.pag.detPag) ? xml.NFe.infNFe.pag.detPag : [xml.NFe.infNFe.pag.detPag];
-        const formaPagto: any = {
-            "01": "Dinheiro", "02": "Cheque", "03": "Cartão de Crédito", "04": "Cartão de Débito", "05": "Crédito Loja",
-            "10": "Vale Alimentação", "11": "Vale Refeição", "12": "Vale Presente", "13": "Vale Combustível",
-            "15": "Boleto Bancário", "16": "Depósito Bancário", "17": "PIX", "18": "Transferência", "19": "Fidelidade",
-            "90": "Sem pagamento", "99": "Outros"
-        };
-
         let IndexX = 0, contL = 0;
+        if (xml.NFe.infNFe.cobr != undefined) {
+            addTXT({ page, text: "FATURA / DUPLICATA", x: 3, y: PDF.mtBlock, maxWidth: PDF.width * 0.25, fontStyle: "negrito" });
 
-        for (const pag of pagamentos) {
-            const forma = formaPagto[pag.tPag] || `Código ${pag.tPag}`;
-            const valor = parseFloat(pag.vPag).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
-            addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + (contL * 22), PDF.width * 0.25, 20);
-            addTXT({ page, text: "FORMA", x: (PDF.width * IndexX) + 3, y: PDF.mtBlock + 9 + (contL * 22), maxWidth: PDF.width * 0.25 });
-            addTXT({ page, text: forma, x: (PDF.width * IndexX) + 3, y: PDF.mtBlock + 19 + (contL * 22), maxWidth: PDF.width * 0.25 });
-            addTXT({ page, text: forma, x: (PDF.width * IndexX) + 3, y: PDF.mtBlock + 9 + (contL * 22), maxWidth: PDF.width * 0.245, align: "right", fontStyle: "negrito" });
-            addTXT({ page, text: valor, x: (PDF.width * IndexX) + 3, y: PDF.mtBlock + 19 + (contL * 22), maxWidth: PDF.width * 0.245, align: "right", fontStyle: "negrito" });
-
-            if ((IndexX + 0.25) >= 1) {
-                IndexX = 0.25
-                contL++;
-            } else {
+            if (Array.isArray(xml.NFe.infNFe.cobr.dup) && xml.NFe.infNFe.cobr.dup.length > 7) { //Muitas duplicatas
+                addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + (contL * 22), PDF.width, 20);
+                addTXT({ page, text: `Existem mais de 7 duplicatas registradas, portanto não serão exibidas, confira diretamente pelo XML.`, x: 3, y: PDF.mtBlock + 13, maxWidth: PDF.width, align: "center" });
                 IndexX += 0.25;
-            }
+            } else {
+                const cobrDup = Array.isArray(xml.NFe.infNFe.cobr.dup) ? xml.NFe.infNFe.cobr.dup : [xml.NFe.infNFe.cobr.dup];
+                for (const [index, dup] of cobrDup.entries()) {
+                    addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + (contL * 22), PDF.width * 0.1428, 20);
 
+                    //Numero da duplicata
+                    addTXT({ page, text: "Num.", x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 8 + (contL * 22), maxWidth: PDF.width * 0.1458 });
+                    addTXT({ page, text: dup.nDup, x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 8 + (contL * 22), maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
+
+                    //Vencimento
+                    addTXT({ page, text: "Venc.", x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 14 + (contL * 22), maxWidth: PDF.width * 0.1458 });
+                    addTXT({ page, text: dup.dVenc, x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 14 + (contL * 22), maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
+
+                    //Vencimento
+                    addTXT({ page, text: "Valor", x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 20 + (contL * 22), maxWidth: PDF.width * 0.1458 });
+                    addTXT({ page, text: dup.vDup, x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 20 + (contL * 22), maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
+
+                    if (index+1 < cobrDup.length) {
+                        if ((IndexX + 0.1458) >= 1) {
+                            IndexX = 0
+                            contL++;
+                        } else {
+
+                            IndexX += 0.146;
+                        }
+                    }
+                }
+            }
+        } else {
+            addTXT({ page, text: "PAGAMENTOS", x: 3, y: PDF.mtBlock, maxWidth: PDF.width * 0.25, fontStyle: "negrito" });
+            const pagamentos = Array.isArray(xml.NFe.infNFe.pag.detPag) ? xml.NFe.infNFe.pag.detPag : [xml.NFe.infNFe.pag.detPag];
+            const formaPagto: any = {
+                "01": "Dinheiro", "02": "Cheque", "03": "Cartão de Crédito", "04": "Cartão de Débito", "05": "Crédito Loja",
+                "10": "Vale Alimentação", "11": "Vale Refeição", "12": "Vale Presente", "13": "Vale Combustível",
+                "15": "Boleto Bancário", "16": "Depósito Bancário", "17": "PIX", "18": "Transferência", "19": "Fidelidade",
+                "90": "Sem pagamento", "99": "Outros"
+            };
+
+            for (const pag of pagamentos) {
+                const forma = formaPagto[pag.tPag] || `Código ${pag.tPag}`;
+                const valor = parseFloat(pag.vPag).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + (contL * 22), PDF.width * 0.25, 20);
+                addTXT({ page, text: "FORMA", x: (PDF.width * IndexX) + 3, y: PDF.mtBlock + 9 + (contL * 22), maxWidth: PDF.width * 0.25 });
+                addTXT({ page, text: forma, x: (PDF.width * IndexX) + 3, y: PDF.mtBlock + 19 + (contL * 22), maxWidth: PDF.width * 0.25 });
+                addTXT({ page, text: forma, x: (PDF.width * IndexX) + 3, y: PDF.mtBlock + 9 + (contL * 22), maxWidth: PDF.width * 0.245, align: "right", fontStyle: "negrito" });
+                addTXT({ page, text: valor, x: (PDF.width * IndexX) + 3, y: PDF.mtBlock + 19 + (contL * 22), maxWidth: PDF.width * 0.245, align: "right", fontStyle: "negrito" });
+
+                if ((IndexX + 0.25) >= 1) {
+                    IndexX = 0.25
+                    contL++;
+                } else {
+                    IndexX += 0.25;
+                }
+
+            }
         }
 
-        PDF.mtBlock += ((contL + 1) * 22) + 6; //+1 pq a linha inicial
+        PDF.mtBlock += ((contL + 1) * 22) + 7; //+1 pq a linha inicial
     }
 
 
@@ -635,7 +671,7 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
             const fmt = (v: any) => parseFloat(v || "0.00").toLocaleString('pt-BR', { minimumFractionDigits: 2 });
 
             const xProdH = await addTXT({ page, text: prod.xProd, x: PDF.width * 0.096, y: PDF.mtBlock + line, maxWidth: PDF.width * 0.237, align: "left" });
-            const y = PDF.mtBlock + line + ((xProdH-1) * 2.7);
+            const y = PDF.mtBlock + line + ((xProdH - 1) * 2.7);
 
             addTXT({ page, text: prod.cProd, x: 0, y, maxWidth: PDF.width * 0.1, align: "center" });
             addTXT({ page, text: prod.NCM, x: PDF.width * 0.34, y, maxWidth: PDF.width * 0.061, align: "center" });

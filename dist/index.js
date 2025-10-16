@@ -83,7 +83,7 @@ var DANFe = async (data = {}) => {
       default:
         font = await PDF.doc.embedFont(StandardFonts.TimesRoman);
     }
-    if (maxWidth + x > PDF.width) maxWidth = PDF.width - x - 2;
+    if (maxWidth + x > PDF.width) maxWidth = PDF.width - x - 5;
     const effectiveLineHeight = lineHeight ?? size * 0.9;
     const lines = wrapText(text, maxWidth, font, size);
     if (cacl) return lines.length;
@@ -303,43 +303,71 @@ var DANFe = async (data = {}) => {
     PDF.mtBlock += 72;
   }
   async function bloco3(page = PDF.pages[PDF.pages.length - 1]) {
-    addTXT({ page, text: "PAGAMENTOS", x: 3, y: PDF.mtBlock, maxWidth: PDF.width * 0.25, fontStyle: "negrito" });
-    const pagamentos = Array.isArray(xml.NFe.infNFe.pag.detPag) ? xml.NFe.infNFe.pag.detPag : [xml.NFe.infNFe.pag.detPag];
-    const formaPagto = {
-      "01": "Dinheiro",
-      "02": "Cheque",
-      "03": "Cart\xE3o de Cr\xE9dito",
-      "04": "Cart\xE3o de D\xE9bito",
-      "05": "Cr\xE9dito Loja",
-      "10": "Vale Alimenta\xE7\xE3o",
-      "11": "Vale Refei\xE7\xE3o",
-      "12": "Vale Presente",
-      "13": "Vale Combust\xEDvel",
-      "15": "Boleto Banc\xE1rio",
-      "16": "Dep\xF3sito Banc\xE1rio",
-      "17": "PIX",
-      "18": "Transfer\xEAncia",
-      "19": "Fidelidade",
-      "90": "Sem pagamento",
-      "99": "Outros"
-    };
     let IndexX = 0, contL = 0;
-    for (const pag of pagamentos) {
-      const forma = formaPagto[pag.tPag] || `C\xF3digo ${pag.tPag}`;
-      const valor = parseFloat(pag.vPag).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-      addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + contL * 22, PDF.width * 0.25, 20);
-      addTXT({ page, text: "FORMA", x: PDF.width * IndexX + 3, y: PDF.mtBlock + 9 + contL * 22, maxWidth: PDF.width * 0.25 });
-      addTXT({ page, text: forma, x: PDF.width * IndexX + 3, y: PDF.mtBlock + 19 + contL * 22, maxWidth: PDF.width * 0.25 });
-      addTXT({ page, text: forma, x: PDF.width * IndexX + 3, y: PDF.mtBlock + 9 + contL * 22, maxWidth: PDF.width * 0.245, align: "right", fontStyle: "negrito" });
-      addTXT({ page, text: valor, x: PDF.width * IndexX + 3, y: PDF.mtBlock + 19 + contL * 22, maxWidth: PDF.width * 0.245, align: "right", fontStyle: "negrito" });
-      if (IndexX + 0.25 >= 1) {
-        IndexX = 0.25;
-        contL++;
-      } else {
+    if (xml.NFe.infNFe.cobr != void 0) {
+      addTXT({ page, text: "FATURA / DUPLICATA", x: 3, y: PDF.mtBlock, maxWidth: PDF.width * 0.25, fontStyle: "negrito" });
+      if (Array.isArray(xml.NFe.infNFe.cobr.dup) && xml.NFe.infNFe.cobr.dup.length > 7) {
+        addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + contL * 22, PDF.width, 20);
+        addTXT({ page, text: `Existem mais de 7 duplicatas registradas, portanto n\xE3o ser\xE3o exibidas, confira diretamente pelo XML.`, x: 3, y: PDF.mtBlock + 13, maxWidth: PDF.width, align: "center" });
         IndexX += 0.25;
+      } else {
+        const cobrDup = Array.isArray(xml.NFe.infNFe.cobr.dup) ? xml.NFe.infNFe.cobr.dup : [xml.NFe.infNFe.cobr.dup];
+        for (const [index, dup] of cobrDup.entries()) {
+          addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + contL * 22, PDF.width * 0.1428, 20);
+          addTXT({ page, text: "Num.", x: PDF.width * IndexX + 1, y: PDF.mtBlock + 8 + contL * 22, maxWidth: PDF.width * 0.1458 });
+          addTXT({ page, text: dup.nDup, x: PDF.width * IndexX + 1, y: PDF.mtBlock + 8 + contL * 22, maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
+          addTXT({ page, text: "Venc.", x: PDF.width * IndexX + 1, y: PDF.mtBlock + 14 + contL * 22, maxWidth: PDF.width * 0.1458 });
+          addTXT({ page, text: dup.dVenc, x: PDF.width * IndexX + 1, y: PDF.mtBlock + 14 + contL * 22, maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
+          addTXT({ page, text: "Valor", x: PDF.width * IndexX + 1, y: PDF.mtBlock + 20 + contL * 22, maxWidth: PDF.width * 0.1458 });
+          addTXT({ page, text: dup.vDup, x: PDF.width * IndexX + 1, y: PDF.mtBlock + 20 + contL * 22, maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
+          if (index + 1 < cobrDup.length) {
+            if (IndexX + 0.1458 >= 1) {
+              IndexX = 0;
+              contL++;
+            } else {
+              IndexX += 0.146;
+            }
+          }
+        }
+      }
+    } else {
+      addTXT({ page, text: "PAGAMENTOS", x: 3, y: PDF.mtBlock, maxWidth: PDF.width * 0.25, fontStyle: "negrito" });
+      const pagamentos = Array.isArray(xml.NFe.infNFe.pag.detPag) ? xml.NFe.infNFe.pag.detPag : [xml.NFe.infNFe.pag.detPag];
+      const formaPagto = {
+        "01": "Dinheiro",
+        "02": "Cheque",
+        "03": "Cart\xE3o de Cr\xE9dito",
+        "04": "Cart\xE3o de D\xE9bito",
+        "05": "Cr\xE9dito Loja",
+        "10": "Vale Alimenta\xE7\xE3o",
+        "11": "Vale Refei\xE7\xE3o",
+        "12": "Vale Presente",
+        "13": "Vale Combust\xEDvel",
+        "15": "Boleto Banc\xE1rio",
+        "16": "Dep\xF3sito Banc\xE1rio",
+        "17": "PIX",
+        "18": "Transfer\xEAncia",
+        "19": "Fidelidade",
+        "90": "Sem pagamento",
+        "99": "Outros"
+      };
+      for (const pag of pagamentos) {
+        const forma = formaPagto[pag.tPag] || `C\xF3digo ${pag.tPag}`;
+        const valor = parseFloat(pag.vPag).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+        addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + contL * 22, PDF.width * 0.25, 20);
+        addTXT({ page, text: "FORMA", x: PDF.width * IndexX + 3, y: PDF.mtBlock + 9 + contL * 22, maxWidth: PDF.width * 0.25 });
+        addTXT({ page, text: forma, x: PDF.width * IndexX + 3, y: PDF.mtBlock + 19 + contL * 22, maxWidth: PDF.width * 0.25 });
+        addTXT({ page, text: forma, x: PDF.width * IndexX + 3, y: PDF.mtBlock + 9 + contL * 22, maxWidth: PDF.width * 0.245, align: "right", fontStyle: "negrito" });
+        addTXT({ page, text: valor, x: PDF.width * IndexX + 3, y: PDF.mtBlock + 19 + contL * 22, maxWidth: PDF.width * 0.245, align: "right", fontStyle: "negrito" });
+        if (IndexX + 0.25 >= 1) {
+          IndexX = 0.25;
+          contL++;
+        } else {
+          IndexX += 0.25;
+        }
       }
     }
-    PDF.mtBlock += (contL + 1) * 22 + 6;
+    PDF.mtBlock += (contL + 1) * 22 + 7;
   }
   async function bloco4(page = PDF.pages[PDF.pages.length - 1]) {
     const ICMS = {
@@ -1217,13 +1245,13 @@ var DAV55 = async (data = { xml: {} }) => {
     addTXT({ page, size: 9, text: `${xml.tagEmit?.xMun || ""} - ${xml.tagEmit?.UF || ""} Fone: ${xml.tagEmit?.fone || ""}`, x: 0, y: PDF.mtBlock + 65 + mt, maxWidth: PDF.width * 0.42, align: "center" });
     if (xml.tagDest) {
       sizeNome = 12;
-      while (await addTXT({ page, size: sizeNome, text: `${xml.tagDest?.xNome}`, x: PDF.width * 0.6, y: PDF.mtBlock + 35 + mt, maxWidth: PDF.width * 0.4, align: "center", fontStyle: "negrito", cacl: true }) >= 2) {
+      while (await addTXT({ page, size: sizeNome, text: `${xml.tagDest?.xNome}`, x: PDF.width * 0.58, y: PDF.mtBlock + 35 + mt, maxWidth: PDF.width * 0.4, align: "center", fontStyle: "negrito", cacl: true }) >= 2) {
         sizeNome--;
       }
-      addTXT({ page, size: sizeNome, text: `${xml.tagDest?.xNome}`, x: PDF.width * 0.6, y: PDF.mtBlock + 35 + mt, maxWidth: PDF.width * 0.4, align: "center", fontStyle: "negrito" });
-      addTXT({ page, size: 9, text: `CNPJ/CPF ${embCNPJCPF(xml.tagDest?.CPF || xml.tagDest?.CNPJ)}`, x: PDF.width * 0.6, y: PDF.mtBlock + 46 + mt, maxWidth: PDF.width * 0.42, align: "center" });
-      addTXT({ page, size: 9, text: `${xml.tagDest?.xBairro || ""} - ${xml.tagDest?.CEP || ""}, ${xml.tagDest?.xLgr || ""}, N\xB0${xml.tagDest?.nro || ""}`, x: PDF.width * 0.6, y: PDF.mtBlock + 55 + mt, maxWidth: PDF.width * 0.42, align: "center" });
-      addTXT({ page, size: 9, text: `${xml.tagDest?.xMun || ""} - ${xml.tagDest?.UF || ""} Fone: ${xml.tagDest?.fone || ""}`, x: PDF.width * 0.6, y: PDF.mtBlock + 65 + mt, maxWidth: PDF.width * 0.42, align: "center" });
+      addTXT({ page, size: sizeNome, text: `${xml.tagDest?.xNome}`, x: PDF.width * 0.58, y: PDF.mtBlock + 35 + mt, maxWidth: PDF.width * 0.4, align: "center", fontStyle: "negrito" });
+      addTXT({ page, size: 9, text: `CNPJ/CPF ${embCNPJCPF(xml.tagDest?.CPF || xml.tagDest?.CNPJ)}`, x: PDF.width * 0.58, y: PDF.mtBlock + 46 + mt, maxWidth: PDF.width * 0.42, align: "center" });
+      addTXT({ page, size: 9, text: `${xml.tagDest?.xMun || ""} - ${xml.tagDest?.UF || ""}, ${xml.tagDest?.xBairro || ""} - ${xml.tagDest?.CEP || ""}, ${xml.tagDest?.xLgr || ""}, N\xB0${xml.tagDest?.nro || ""}`, x: PDF.width * 0.58, y: PDF.mtBlock + 55 + mt, maxWidth: PDF.width * 0.42, align: "center" });
+      addTXT({ page, size: 9, text: ``, x: PDF.width * 0.6, y: PDF.mtBlock + 65 + mt, maxWidth: PDF.width * 0.42, align: "center" });
     } else {
     }
     addTXT({ page, size: 16, text: "CUPOM", x: PDF.width * 0.393, y: PDF.mtBlock + 3, maxWidth: PDF.width * 0.2, align: "center", fontStyle: "negrito" });
@@ -1418,13 +1446,25 @@ var DAV55 = async (data = { xml: {} }) => {
     addRet(page, 0, PDF.mtBlock + 8, PDF.width * 0.65, 40);
     addTXT({ page, text: "INFORMA\xC7\xD5ES COMPLEMENTARES", x: 3, y: PDF.mtBlock + 8, maxWidth: PDF.width * 0.5, align: "left", fontStyle: "negrito" });
     addTXT({ page, text: "RESERVADO AO FISCO", x: PDF.width * 0.652, y: PDF.mtBlock + 8, maxWidth: PDF.width * 0.5, align: "left", fontStyle: "negrito" });
+    if (await addTXT({ page, text: xml.taginfAdic?.infAdFisco || "", x: 3, y: PDF.mtBlock + 14, maxWidth: PDF.width * 0.65, align: "left", cacl: true }) >= 5) {
+      addTXT({ page, text: xml.taginfAdic?.infAdFisco.slice(0, 400) + "..." || "", x: 3, y: PDF.mtBlock + 14, maxWidth: PDF.width * 0.65, align: "left" });
+    } else {
+      addTXT({ page, text: xml.taginfAdic?.infAdFisco || "", x: 3, y: PDF.mtBlock + 14, maxWidth: PDF.width * 0.65, align: "left" });
+    }
+    ;
+    if (await addTXT({ page, text: xml.taginfAdic?.infCpl || "", x: PDF.width * 0.652, y: PDF.mtBlock + 14, maxWidth: PDF.width * 0.65, align: "left", cacl: true }) >= 5) {
+      addTXT({ page, text: xml.taginfAdic?.infCpl.slice(0, 200) + "..." || "", x: PDF.width * 0.652, y: PDF.mtBlock + 14, maxWidth: PDF.width * 0.65, align: "left" });
+    } else {
+      addTXT({ page, text: xml.taginfAdic?.infCpl || "", x: PDF.width * 0.652, y: PDF.mtBlock + 14, maxWidth: PDF.width * 0.65, align: "left" });
+    }
+    ;
     PDF.mtBlock += 40;
   }
   async function bloco8(page = PDF.pages[PDF.pages.length - 1]) {
     const agora = /* @__PURE__ */ new Date();
     const dataFormatada = agora.toLocaleDateString("pt-BR");
     const horaFormatada = agora.toLocaleTimeString("pt-BR");
-    const textoEsquerda = `Impresso em ${dataFormatada} \xE0s ${horaFormatada}  Guara PDV - https://guaradev.com`;
+    const textoEsquerda = `Impresso em ${dataFormatada} \xE0s ${horaFormatada}.`;
     addTXT({ page, text: textoEsquerda, x: 3, y: PDF.mtBlock + 8, maxWidth: PDF.width, align: "left" });
     addTXT({ page, text: "Powered by @node-sped-pdf", x: 3, y: PDF.mtBlock + 8, maxWidth: PDF.width * 0.989, align: "right", fontStyle: "italic" });
   }
