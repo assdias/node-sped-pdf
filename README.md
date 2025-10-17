@@ -11,7 +11,7 @@
 📣 **Participe da comunidade!**  
 💬 Tire dúvidas, compartilhe experiências e colabore com outros desenvolvedores!
 
-👉 [Grupo de Discussão no Google Groups](https://groups.google.com/g/node-sped-pdf)
+👉 [Grupo de Discussão no Google Groups](https://groups.google.com/g/node-sped-nfe)
 
 ![npm](https://img.shields.io/npm/dw/node-sped-pdf)
 

@@ -307,7 +307,6 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
         addTXT({ page, size: 8, text: "Consulta de autenticidade no portal nacional da NF-e", x: PDF.width * 0.595, y: PDF.mtBlock + 70, maxWidth: PDF.width * 0.39, align: "center" });
         addTXT({ page, size: 8, text: " www.nfe.fazenda.gov.br/portal ou no site da Sefaz Autorizadora", x: PDF.width * 0.595, y: PDF.mtBlock + 81, maxWidth: PDF.width * 0.39, align: "center" });
 
-        console.log(xml.protNFe?.infProt?.nProt)
         addTXT({ page, text: "PROTOCOLO DE AUTORIZAÇÃO DE USO", x: PDF.width * 0.575, y: PDF.mtBlock + 92, maxWidth: PDF.width * 0.29 });
         addTXT({ page, size: 10, text: `${xml.protNFe?.infProt?.nProt || ""} - ${xml.protNFe?.infProt?.dhRecbto ? new Date(xml.protNFe.infProt.dhRecbto).toLocaleString('pt-BR') : ""}`, x: PDF.width * 0.595, y: PDF.mtBlock + 101, maxWidth: PDF.width * 0.39, align: "center", fontStyle: "negrito" });
 
@@ -424,9 +423,9 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
         if (xml.NFe.infNFe.cobr != undefined) {
             addTXT({ page, text: "FATURA / DUPLICATA", x: 3, y: PDF.mtBlock, maxWidth: PDF.width * 0.25, fontStyle: "negrito" });
 
-            if (Array.isArray(xml.NFe.infNFe.cobr.dup) && xml.NFe.infNFe.cobr.dup.length > 7) { //Muitas duplicatas
+            if (Array.isArray(xml.NFe.infNFe.cobr.dup) && xml.NFe.infNFe.cobr.dup.length > 14) { //Muitas duplicatas
                 addRet(page, PDF.width * IndexX, PDF.mtBlock + 8 + (contL * 22), PDF.width, 20);
-                addTXT({ page, text: `Existem mais de 7 duplicatas registradas, portanto não serão exibidas, confira diretamente pelo XML.`, x: 3, y: PDF.mtBlock + 13, maxWidth: PDF.width, align: "center" });
+                addTXT({ page, text: `Existem mais de 14 duplicatas registradas, portanto não serão exibidas, confira diretamente pelo XML.`, x: 3, y: PDF.mtBlock + 13, maxWidth: PDF.width, align: "center" });
                 IndexX += 0.25;
             } else {
                 const cobrDup = Array.isArray(xml.NFe.infNFe.cobr.dup) ? xml.NFe.infNFe.cobr.dup : [xml.NFe.infNFe.cobr.dup];
@@ -439,13 +438,13 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
 
                     //Vencimento
                     addTXT({ page, text: "Venc.", x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 14 + (contL * 22), maxWidth: PDF.width * 0.1458 });
-                    addTXT({ page, text: dup.dVenc, x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 14 + (contL * 22), maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
+                    addTXT({ page, text: new Date(dup.dVenc).toLocaleDateString('pt-BR'), x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 14 + (contL * 22), maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
 
                     //Vencimento
                     addTXT({ page, text: "Valor", x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 20 + (contL * 22), maxWidth: PDF.width * 0.1458 });
                     addTXT({ page, text: dup.vDup, x: (PDF.width * IndexX) + 1, y: PDF.mtBlock + 20 + (contL * 22), maxWidth: PDF.width * 0.1458, align: "right", fontStyle: "negrito" });
 
-                    if (index+1 < cobrDup.length) {
+                    if (index + 1 < cobrDup.length) {
                         if ((IndexX + 0.1458) >= 1) {
                             IndexX = 0
                             contL++;
@@ -627,11 +626,19 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
 
         addTXT({ page, text: "DADOS DOS PRODUTOS / SERVIÇOS", x: 3, y: PDF.mtBlock, maxWidth: PDF.width, fontStyle: "negrito" });
 
+        let blockH;
+        if (PDF.pages.length == 1) { //Altura do bloco
+            //B7+B8 = 72 Height
+            blockH = PDF.height - PDF.mtBlock - 72;
+        } else {
+            blockH = PDF.height - PDF.mtBlock - 18;
+        }
+
         // Cabeçalho da tabela
-        addRet(page, 0, PDF.mtBlock + 8, PDF.width, PDF.pages.length == 1 ? 355 : PDF.height - PDF.mtBlock - 18);
+        addRet(page, 0, PDF.mtBlock + 8, PDF.width, blockH);
         addRet(page, 0, PDF.mtBlock + 8, PDF.width, 15);
         const colunas = [0.1, 0.34, 0.403, 0.453, 0.488, 0.525, 0.6, 0.655, 0.712, 0.76, 0.815, 0.875, 0.92, 0.957];
-        for (const x of colunas) addLTV(page, PDF.width * x, PDF.mtBlock + 8, PDF.pages.length == 1 ? 355 : PDF.height - PDF.mtBlock - 18);
+        for (const x of colunas) addLTV(page, PDF.width * x, PDF.mtBlock + 8, blockH);
 
         // Títulos
         addTXT({ page, text: "CÓDIGO PRODUTO", x: PDF.width * 0.003, y: PDF.mtBlock + 8, maxWidth: PDF.width * 0.09, align: "center" });
@@ -651,8 +658,8 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
         addTXT({ page, text: "ALÍQ. IPI", x: PDF.width * 0.961, y: PDF.mtBlock + 8.5, maxWidth: PDF.width * 0.03, align: "center" });
 
         // Iterar pelos produtos
-        let line = 24,
-            lLimite = PDF.pages.length == 1 ? 50 : 97,
+        let line = 23,
+            lLimite = blockH / 7.1,
             lIndex = 0;
         for (const [iDet, det] of xml.NFe.infNFe.det.entries()) {
             let prod = det.prod;
@@ -661,7 +668,7 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
             lIndex += await addTXT({ page, text: prod.xProd, x: 0, y: 0, maxWidth: PDF.width * 0.237, align: "center", cacl: true });
             if (lIndex >= lLimite) {
                 xml.NFe.infNFe.det.splice(0, iDet);
-                PDF.mtBlock += PDF.pages.length == 1 ? 365 : 50;
+                PDF.mtBlock += blockH + 10;
                 return false;
             }
 
@@ -689,7 +696,7 @@ const DANFe = async (data: { xml?: string, consulta?: string, logo?: any | null,
             addTXT({ page, text: fmt(IPI.pIPI), x: PDF.width * 0.954, y, maxWidth: PDF.width * 0.061, align: "center" });
             line += xProdH * 6.9;
         }
-        PDF.mtBlock += 365;
+        PDF.mtBlock += blockH + 10;
         return true;
     }
 
