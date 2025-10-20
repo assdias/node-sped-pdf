@@ -32,10 +32,6 @@ npm install node-sped-pdf
 ## 🚀 Uso em Node.js
 
 ```javascript
-// Browser
-import { DAV55, DANFe, DANFCe } from 'https://cdn.jsdelivr.net/npm/node-sped-pdf@latest/+esm';
-
-// Nodejs
 import { DANFe, DANFCe } from 'node-sped-pdf';
 
 DANFe({ xml: `XML DA NOTA FISCAL`, consulta: `XML DE CONSULTA`, logo: "http://localhost:5173/logo.jpg" }).then(res => {
@@ -58,7 +54,11 @@ DANFe({ xml: `XML DA NOTA FISCAL`, consulta: `XML DE CONSULTA`, logo: "http://lo
     <iframe id="pdfOutput" style="width:100%;height:90vh;"></iframe>
 
     <script type="module">
-      import { DANFe, DANFCe }  from './node_modules/node-sped-pdf/src/index.js';
+      // Browser
+      import { DAV55, DANFe, DANFCe } from 'https://cdn.jsdelivr.net/npm/node-sped-pdf@latest/+esm';
+
+      //Vite
+      import { DANFe, DANFCe } from 'node-sped-pdf';
 
       window.gerarPDF = async function() {
         DANFe({ xml: `XML DA NOTA FISCAL`, consulta: `XML DE CONSULTA`, logo: "http://localhost:5173/logo.jpg" }).then(res => {
